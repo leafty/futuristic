@@ -3,7 +3,7 @@ futuristic
 
 Futures for node.js
 
-This is inspired by the read of : [Currying the callback, or the essence of futures…](bjouhier.wordpress.com/2011/04/04/currying-the-callback-or-the-essence-of-futures/).
+This is inspired by the read of : [Currying the callback, or the essence of futures…](bjouhier.wordpress.com/2011/04/04/currying-the-callback-or-the-essence-of-futures/)
 
 ## Install
 
@@ -120,6 +120,72 @@ a(log('is it even?')); // will take some time
 
 You may have noticed that you could still interact with the node console while
 it computes.
+
+(More to come)
+
+## API
+
+### Futures
+
+Futures form a monad, expect to find your usual functions.
+
+#### nextTick(callback)(arg1, arg2, ...)
+
+Curried version of `process.nextTick`.
+
+#### asap(callback)(arg1, arg2, ...)
+
+Like `nextTick`, but without the event loop starvation.
+
+#### log(name)
+
+Creates a callback you can use to figure out what your futures are doing.
+Can be used to time computations too.
+
+#### future(x) = unit(x)
+
+Creates a future that computes the value `x`.
+
+#### fail(error)
+
+Creates a futures that fails to compute and gives `error` to callbacks.
+`error` has to be a value that is coerced to `true` for it to work.
+
+#### zero
+
+Minimalist failure.
+This monad has many zeroes (all futures that fail), this is just one.
+
+#### bind(fx, f) = flatMap(fx, f)
+
+The binding operation for this monad.
+
+#### liftM1(f)
+
+Transforms `f` a unary function that works on values into one that deals with futures.
+
+#### liftM2(f)
+
+Same as `liftM1` but `f` now takes two arguments.
+
+#### orElse(fx, fy) = plus(fx, fy)
+
+The additive operation for this monad.
+Creates a future that computes `x` (the value of the future `fx`)
+or the value of `y` if that fails.
+
+#### flatten(fx)
+
+Flattens a future of a future into a future.
+It will perform the computation of the outside future.
+
+#### tailCall(f)(arg1, arg2, ...)
+
+Magic function to write recursive functions that take values as argument and
+return futures.
+When you find a **tail call** of the form `return f(v1, v2, ...)`, replace that
+by `tailCall(f)(v1, v2, ...)`.
+Try to modify with `isEven` and `isOdd` to see it in action.
 
 ## License
 
