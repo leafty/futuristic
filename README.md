@@ -166,7 +166,7 @@ Type: `a -> Future a`
 
 Creates a futures that fails to compute and gives `error` to callbacks.
 `error` has to be a value that is coerced to `true` for it to work.
-Type: `a -> Future b` (`a` is not the type of the error)
+Type: `a -> Future b` (`b` is not the type of the error)
 
 #### zero
 
