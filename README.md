@@ -177,7 +177,6 @@ or the value of `y` if that fails.
 #### flatten(fx)
 
 Flattens a future of a future into a future.
-It will perform the computation of the outside future.
 
 #### tailCall(f)(arg1, arg2, ...)
 
