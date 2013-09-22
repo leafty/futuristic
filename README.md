@@ -50,6 +50,21 @@ aFuture(v1, v2, ...)(function(err, res) {
 });
 ```
 
+Even if javascript has no type system, it can be helpfull to use types to help
+reason about what object we expect to receive or pass to functions.
+For instance, we could say that the function `first`
+```js
+var first = function(str) {
+  if (str.length === 0) {
+    return ''
+  } else {
+    return str[0]
+  }
+}
+```
+has the type `String -> String`.
+A future that computes a value of type `a` has the type `Future a`.
+
 ## Examples
 
 Some examples will help understand what makes futures a fun thing to use.
@@ -145,38 +160,46 @@ Can be used to time computations too.
 #### future(x) = unit(x)
 
 Creates a future that computes the value `x`.
+Type: `a -> Future a`
 
 #### fail(error)
 
 Creates a futures that fails to compute and gives `error` to callbacks.
 `error` has to be a value that is coerced to `true` for it to work.
+Type: `a -> Future a` (`a` is not the type of the error)
 
 #### zero
 
 Minimalist failure.
 This monad has many zeroes (all futures that fail), this is just one.
+Type: `Future a`
 
 #### bind(fx, f) = flatMap(fx, f)
 
 The binding operation for this monad.
+Type: `Future a -> (a -> Future b) -> Future b`
 
 #### liftM1(f)
 
 Transforms `f` a unary function that works on values into one that deals with futures.
+Type: `(a -> b) -> (Future a -> Future b)`
 
 #### liftM2(f)
 
 Same as `liftM1` but `f` now takes two arguments.
+Type: `(a -> b -> c) -> (Future a -> Future b -> Future c)`
 
 #### orElse(fx, fy) = plus(fx, fy)
 
 The additive operation for this monad.
 Creates a future that computes `x` (the value of the future `fx`)
 or the value of `y` if that fails.
+Type: `Future a -> Future a -> Future a`
 
 #### flatten(fx)
 
 Flattens a future of a future into a future.
+Type: `Future Future a -> Future a`
 
 #### tailCall(f)(arg1, arg2, ...)
 
