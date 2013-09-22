@@ -1,0 +1,14 @@
+{
+  "name": "futuristic",
+  "description": "Futures fo node.js",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leafty/futuristic.git"
+  },
+  "keywords": [
+    "futures"
+  ],
+  "author": "Johann-Michael Thiebaut <johann.thiebaut@gmail.com>",
+  "license": "MIT"
+}
