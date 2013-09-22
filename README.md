@@ -5,6 +5,10 @@ Futures for node.js
 
 This is inspired by the read of : [Currying the callback, or the essence of futures…](bjouhier.wordpress.com/2011/04/04/currying-the-callback-or-the-essence-of-futures/)
 
+## Status
+
+Experimental
+
 ## Install
 
 ```bash
