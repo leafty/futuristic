@@ -136,7 +136,7 @@ var string = function(str) {
 /**
  * Parsers for identifiers
  */
-var identASCII = letterACII.seq(alphanumASCII.rep()).reduce();
+var identASCII = letterASCII.seq(alphanumASCII.rep()).reduce();
 var ident = function(del) {
   return letter(del).seq(alphanum(del).rep()).reduce()
 };
@@ -242,3 +242,27 @@ var stringLitteral = token(stringLit);
 exports.item = item;
 exports.sat = sat;
 exports.char = char;
+exports.digit = digit;
+exports.lower = lower;
+exports.upper = upper;
+exports.letterASCII = letterASCII;
+exports.whiteSpace = whiteSpace;
+exports.nonWhiteSpace = nonWhiteSpace;
+exports.letter = letter;
+exports.alphanumASCII = alphanumASCII;
+exports.alphanum = alphanum;
+exports.string = string;
+exports.identASCII = identASCII;
+exports.ident = ident;
+exports.nat = nat;
+exports.int = int;
+exports.stringLit = stringLit;
+exports.spaces = spaces;
+exports.triml = triml;
+exports.trimr = trimr;
+exports.token = token;
+exports.natural = natural;
+exports.integer = integer;
+exports.symbol = symbol;
+exports.identifier = identifier;
+exports.stringLitteral = stringLitteral;
