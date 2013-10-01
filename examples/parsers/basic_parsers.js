@@ -17,6 +17,7 @@ var fail = Future.fail;
 var parsers = require('./parsers');
 var Parser = parsers.Parser;
 var ParserResult = parsers.ParserResult;
+var result = Parser.result;
 
 /**
  * Consumes a char
@@ -162,6 +163,21 @@ var int = function() {
 }();
 
 /**
+ * Parser for string litterals
+ */
+var stringLit = (function() {
+  var quote = char('\'');
+  var nonQuote = item.guard(function(x) {
+    return x !== '\''
+  }, 'non quote');
+  var escapedQuote = string('\\\'').val('\'');
+  return quote.seqr(
+    escapedQuote.or(nonQuote).rep1().reduce().or(
+      result(''))).seql(
+    quote);
+})();
+
+/**
  * Parser for any amount of white spaces
  */
 var spaces = whiteSpace.rep();
@@ -190,24 +206,24 @@ var token = function(p) {
 };
 
 /**
- * Parser for natural numbers
+ * Tokenized parser for natural numbers
  */
 var natural = token(nat);
 
 /**
- * Parser for integers
+ * Tokenized parser for integers
  */
 var integer = token(int);
 
 /**
- * Parser for specific strings
+ * Tokenized parser for specific strings
  */
 var symbol = function(x) {
   return token(string(x))
 };
 
 /**
- * Parser for identifiers
+ * Tokenized parser for identifiers
  */
 var identifier = function(del, kw) {
   return token(ident(del).guard(function(x) {
@@ -215,3 +231,14 @@ var identifier = function(del, kw) {
   }, 'non-reserved word'))
 };
 
+/**
+ * Tokenized parser for string litterals
+ */
+var stringLitteral = token(stringLit);
+
+/**
+ * Export API
+ */
+exports.item = item;
+exports.sat = sat;
+exports.char = char;
