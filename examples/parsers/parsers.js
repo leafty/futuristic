@@ -1,24 +1,23 @@
 /**
- * parser.js
- * ---------
- * Parser implementation using futures.
+ * parsers.js
+ * ----------
+ * Parser combinators implementation using futures.
  * Author: Johann-Michael Thiebaut <johann.thiebaut@gmail.com>
  */
 
 /**
  * Dependencies
  */
-var futuristic = require('../lib');
+var futuristic = require('../../lib');
 var Future = futuristic.Future;
 var future = function(x) {
   return new Future(x)
 };
 var fail = Future.fail;
-// var asap = futuristic.engine.asap;
 
 /**
- * Input to feed the parsers.
- * 
+ * Input to feed the parsers
+ * Basically a linked list with char position.
  */
 var InputString = function(head, tail, pos) {
   this.head = head;
@@ -26,6 +25,9 @@ var InputString = function(head, tail, pos) {
   this.pos = pos;
 };
 
+/**
+ * Creates an input from a string
+ */
 InputString.fromString = function(str) {
   var input = new InputString(null, null, str.length);
   for (var i = str.length - 1; i >= 0; i--) {
@@ -35,7 +37,12 @@ InputString.fromString = function(str) {
 };
 
 /**
- * Parser result.
+ * Parser result (success)
+ * Contains:
+ *  - object returned by the parser
+ *  - matched input string
+ *  - starting position of matched input
+ *  - next is the input not consumed by the parser 
  */
 var ParserResult = function(res, matched, pos, next) {
   this.res = res;
@@ -44,46 +51,46 @@ var ParserResult = function(res, matched, pos, next) {
   this.next = next;
 };
 
-var Parser = function(f) {
-  this.f = f;
+/**
+ * Parser
+ * parse: the parsing function of this parser.
+ * parse is of type: Input -> Future a
+ */
+var Parser = function(parse) {
+  this.parse = parse;
 };
 
-var result = function(v) {
-  return new Parser(function(inp) {
-    return future(new ParserResult(v, '', inp.pos, inp))
+var result = function(value) {
+  return new Parser(function(input) {
+    return future(new ParserResult(value, '', input.pos, input))
   })
 };
 Parser.result = result;
 
-// var zero = new Parser(function(x) {
-//   return fail('zero')
-// });
-
-// var failure = function(err) {
-//   return new Parser(function(inp) {
-//     return fail(err)
-//   })
-// };
-
+/**
+ * Bind operation of this monad
+ * This is the hidden magic.
+ * fq function that takes one argument and returns a parser.
+ */
 Parser.prototype.bind = function(fq) {
   var p = this;
-  return new Parser(function(inp) {
-    return p.f(inp).bind(function(pr) {
-      return fq(pr.res).f(pr.next).bind(function(pr2) {
-        return future(new ParserResult(pr2.res, pr.matched + pr2.matched, pr.pos, pr2.next))
+  return new Parser(function(input) {
+    return p.parse(input).bind(function(prx) {
+      return fq(prx.res).parse(prx.next).bind(function(pry) {
+        return future(new ParserResult(
+          pry.res,
+          prx.matched + pry.matched,
+          prx.pos,
+          pry.next
+        ))
       })
     })
   })
 };
 
-var item = new Parser(function(inp) {
-  if (inp.head === null) {
-    return fail({ expected: 'any char', found: 'end of input', pos: inp.pos })
-  } else {
-    return future(new ParserResult(inp.head, inp.head, inp.pos, inp.tail))
-  }
-});
-
+/**
+ * Sequential combination
+ */
 Parser.prototype.seq = function(q) {
   return this.bind(function(x) {
     return q.bind(function(y) {
@@ -92,6 +99,9 @@ Parser.prototype.seq = function(q) {
   })
 };
 
+/**
+ * Sequential combination, only keeps left result
+ */
 Parser.prototype.seql = function(q) {
   return this.bind(function(x) {
     return q.bind(function(y) {
@@ -100,6 +110,9 @@ Parser.prototype.seql = function(q) {
   });
 };
 
+/**
+ * Sequential combination, only keeps right result
+ */
 Parser.prototype.seqr = function(q) {
   return this.bind(function(x) {
     return q.bind(function(y) {
@@ -108,10 +121,16 @@ Parser.prototype.seqr = function(q) {
   });
 };
 
+/**
+ * Guard a parser with a predicate
+ * f predicate
+ * expected string explaining what f is testing,
+ * used for debugging
+ */
 Parser.prototype.guard = function(f, expected) {
   var p = this;
-  return new Parser(function(inp) {
-    return p.f(inp).bind(function(pr) {
+  return new Parser(function(input) {
+    return p.parse(input).bind(function(pr) {
       if (f(pr.res)) {
         return future(pr)
       } else {
@@ -121,35 +140,25 @@ Parser.prototype.guard = function(f, expected) {
   })
 };
 
-var sat = function(f, expected) {
-  return item.guard(f, expected);
-};
-
-var char = function(x) {
-  return sat(function(y) { return x === y; }, x);
-};
-
+/**
+ * Alternative combinator
+ * If parser on the left fail, then try the one on the right
+ */
 Parser.prototype.or = function(q) {
   var p = this;
-  return new Parser(function(inp) {
-    return p.f(inp).then(null, function(err1) {
-      return q.f(inp).then(null, function(err2) {
-        return fail([err1, err2])
+  return new Parser(function(input) {
+    return p.parse(input).then(null, function(errx) {
+      return q.parse(input).then(null, function(erry) {
+        return fail([errx, erry])
       })
     })
   })
 };
 
-var digit = sat(function(x) { return '0' <= x && x <= '9'; }, 'digit');
-
-var lower = sat(function(x) { return 'a' <= x && x <= 'z'; }, 'lower case letter');
-
-var upper = sat(function(x) { return 'A' <= x && x <= 'Z'; }, 'upper case letter');
-
-var letter = lower.or(upper);
-
-var alphanum = letter.or(digit);
-
+/**
+ * Repetition combinator
+ * Match is the longest possible
+ */
 Parser.prototype.rep = function() {
   var p = this;
   return this.bind(function(x) {
@@ -159,6 +168,10 @@ Parser.prototype.rep = function() {
   }).or(result([]))
 };
 
+/**
+ * Repetition combinator, with at least one match
+ * Match is the longest possible
+ */
 Parser.prototype.rep1 = function() {
   var p = this;
   return this.bind(function(x) {
@@ -168,6 +181,10 @@ Parser.prototype.rep1 = function() {
   })
 };
 
+/**
+ * Repetition combinator, with a separator and at least matched once
+ * Match is the longest possible
+ */
 Parser.prototype.repsep1 = function(q) {
   var p = this;
   return this.bind(function(x) {
@@ -179,16 +196,26 @@ Parser.prototype.repsep1 = function(q) {
   })
 };
 
+/**
+ * Repetition combinator, with a separator
+ * Match is the longest possible
+ */
 Parser.prototype.repsep = function(q) {
   return this.repsep1(q).or(result([]))
 };
 
-Parser.prototype.val = function(v) {
+/**
+ * Result of parser is discarded and replaced by value
+ */
+Parser.prototype.val = function(value) {
   return this.bind(function() {
-    return result(v)
+    return result(value)
   })
 };
 
+/**
+ * Flattens an array as most as possible
+ */
 var flatten = function(l) {
   if (l instanceof Array) {
     var res = [];
@@ -205,6 +232,11 @@ var flatten = function(l) {
   }
 };
 
+/**
+ * Result of parser is applied to f
+ * Set flat to true to get flattened arguments,
+ * especially after sequencing.
+ */
 Parser.prototype.map = function(f, flat) {
   if (flat) {
     return this.bind(function(x) {
@@ -217,6 +249,11 @@ Parser.prototype.map = function(f, flat) {
   }
 };
 
+/**
+ * Result of parser is reduced using f,
+ * it has to be an non-empty array.
+ * f default to +
+ */
 Parser.prototype.reduce = function(f) {
   if (typeof f !== 'function') {
     f = function(x, y) {
@@ -230,6 +267,12 @@ Parser.prototype.reduce = function(f) {
   }, true)
 };
 
+/**
+ * Variant of repsep1 where the separator has to return
+ * an operator used to reduce the repeted output.
+ * This one folds from the left
+ * (to use with left associative operators).
+ */
 Parser.prototype.chainl1 = function(op) {
   var p = this;
   var rest = function(x) {
@@ -243,6 +286,12 @@ Parser.prototype.chainl1 = function(op) {
   return this.bind(rest);
 };
 
+/**
+ * Variant of repsep1 where the separator has to return
+ * an operator used to reduce the repeted output.
+ * This one folds from the right
+ * (to use with right associative operators).
+ */
 Parser.prototype.chainr1 = function(op) {
   var p = this;
   var rest = function(x) {
@@ -258,65 +307,12 @@ Parser.prototype.chainr1 = function(op) {
   return this.bind(rest);
 };
 
-var string = function(str) {
-  if (str.length === 0) {
-    return result('')
-  } else {
-    return char(str[0]).bind(function() {
-      return string(str.substr(1)).bind(function() {
-        return result(str);
-      });
-    });
-  }
-};
-
-var ident = letter.seq(alphanum.rep()).reduce();
-
-var nat = digit.rep1().reduce().map(function(x) {
-  return parseInt(x)
-});
-
-var int = function() {
-  var neg = function(x) { return -x; };
-  var id = function(x) { return x; };
-
-  var op = char('-').val(neg).or(result(id));
-
-  return op.seq(nat).map(function (f, x) {
-    return f(x)
-  }, true)
-}();
-
-var spaces = sat(function(x) {
-  return x === ' ' || x === '\t' || x === '\r' || x === '\n'
-}, 'space').rep().val(null);
-
-var triml = function(p) {
-  return spaces.seqr(p)
-};
-
-var trimr = function(p) {
-  return p.seql(spaces)
-};
-
-var token = function(p) {
-  return spaces.seqr(p.seql(spaces))
-};
-
-var natural = token(nat);
-
-var integer = token(int);
-
-var symbol = function(x) {
-  return token(string(x));
-};
-
-var identifier = function(kw) {
-  return token(ident.guard(function(x) {
-    return kw.hasOwnProperty(x) === false;
-  }, 'non-reserved word'));
-};
-
+/**
+ * Export API
+ */
+exports.InputString = InputString;
+exports.ParserResult = ParserResult;
+exports.Parser = Parser;
 
 
 // Expr -> Expr + Term | Term ==> Expr -> Term chainl1 '+'
