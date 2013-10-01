@@ -224,6 +224,8 @@ var symbol = function(x) {
 
 /**
  * Tokenized parser for identifiers
+ * del delimiters
+ * kw reserved words
  */
 var identifier = function(del, kw) {
   return token(ident(del).guard(function(x) {
